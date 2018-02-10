@@ -1,0 +1,4 @@
+.app .facet-list.no-results {
+  width: 100%;
+  max-width: inherit;
+}

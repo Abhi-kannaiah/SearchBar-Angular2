@@ -1,0 +1,102 @@
+const {Component} = ng.core;
+const {bootstrap} = ng.platform.browser;
+
+const client = algoliasearch('latency', '249078a3d4337a8231f1665ec5a44966');
+const algoliasearchHelper = algoliasearchHelper(client, 'bestbuy', {
+  disjunctiveFacets: ['category'],
+  hitsPerPage: 10
+});
+
+@Component({
+  selector: 'search-box',
+  template: `
+   <div class="form">
+     <input 
+        type="text"
+        class="search-box" 
+        placeholder="{{placeholder}}"
+        (keyup)="search()"
+        [(ngModel)]="query"
+     />
+    </div>
+   `
+})
+class SearchBox {
+  query = ''
+  placeholder = 'Search...'
+  constructor() {
+    algoliasearchHelper.setQuery(this.query).search();
+  }
+  search() {
+    algoliasearchHelper.setQuery(this.query).search();
+  }
+}
+
+@Component({
+  selector: 'refinement-list',
+  template: `
+    <ul class="facet-list" [class.no-results]="facets.length === 0">
+      <li 
+        *ngFor="let facet of facets"
+        [class.active]="facet.isRefined"
+        (click)="toggleFacet(facet.name)"
+      >
+        <input type="checkbox" [name]="facet.name"/>
+        {{facet.name}}
+        <span class="badge">{{facet.count}}</span>
+      </li>
+      <li *ngIf="facets.length === 0">No results.</li>
+    </ul>
+  `
+})
+class RefinementList {
+  facets = []
+
+  constructor() {
+    algoliasearchHelper.on('result', results => {
+      this.facets = results.getFacetValues('category', ['selected', 'count:desc']).slice(0, 5);
+    });
+  }
+
+  toggleFacet(facetName: string) {
+    algoliasearchHelper.toggleRefinement('category', facetName).search()
+  }
+}
+
+@Component({
+  selector: 'results',
+  template: `
+    <div class="results">
+      <div *ngFor="let hit of hits" 
+        class="list-group-item" 
+        [innerHTML]="hit._highlightResult.name.value"
+      >
+      crap
+      </div>
+    </div>
+  `
+})
+class Results {
+  hits = []
+  
+  constructor() {
+    algoliasearchHelper.on('result', results => {
+      this.hits = results.hits
+    });
+  }
+}
+
+@Component({
+  selector: 'my-app',
+  directives: [SearchBox, RefinementList, Results],
+  template: `
+    <div class="app">
+      <h1>Search</h1>
+      <search-box></search-box>
+      <refinement-list></refinement-list>
+      <results></results>
+    </div>
+  `
+})
+class AppComponent { }
+bootstrap(AppComponent);
